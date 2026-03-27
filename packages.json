@@ -151,19 +151,14 @@
       }
     },
     {
-      "name": "ffmpeg-full",
-      "description": "Full ffmpeg — all codecs (h264, h265, vp9, aac, mp3). ~70MB",
-      "version": "7.1",
+      "name": "ffmpeg-nervos",
+      "description": "Custom ffmpeg — h264 + AAC + PulseAudio audio capture. 11MB",
+      "version": "7.0.2",
       "category": "media",
-      "homepage": "https://johnvansickle.com/ffmpeg/",
+      "homepage": "https://github.com/toastmanAu/nervos-launcher",
       "binaries": {
         "arm64": {
-          "url": "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz",
-          "bin": "ffmpeg",
-          "archive": true
-        },
-        "x86_64": {
-          "url": "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz",
+          "url": "https://github.com/toastmanAu/nervos-launcher/releases/download/v0.2.0/ffmpeg-nervos-arm64.tar.gz",
           "bin": "ffmpeg",
           "archive": true
         }
@@ -171,8 +166,8 @@
       "post_install": []
     },
     {
-      "name": "ffmpeg-lite",
-      "description": "Minimal ffmpeg — h264 + mp4 only, screen recording. ~20MB",
+      "name": "ffmpeg-full",
+      "description": "Full ffmpeg — all codecs, no audio capture. ~70MB",
       "version": "7.1",
       "category": "media",
       "homepage": "https://johnvansickle.com/ffmpeg/",
