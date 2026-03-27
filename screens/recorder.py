@@ -41,20 +41,37 @@ class RecorderPage(Page):
                 "action": "stop",
             })
         else:
-            items.append({
-                "text": "Start Recording",
-                "subtext": f"{self.recorder.fps}fps {self.recorder.quality}",
-                "subcolor": COLORS["green"],
-                "action": "start",
-            })
+            if self.recorder.ffmpeg_available:
+                encoder, _ = self.recorder._detect_encoder()
+                items.append({
+                    "text": "Start Recording",
+                    "subtext": f"{self.recorder.fps}fps {encoder}",
+                    "subcolor": COLORS["green"],
+                    "action": "start",
+                })
+            else:
+                items.append({
+                    "text": "Install ffmpeg first",
+                    "subtext": "Settings > Install",
+                    "subcolor": COLORS["red"],
+                    "action": None,
+                })
 
         items.append({
             "text": "Screenshot",
-            "subtext": "single frame",
+            "subtext": "fbgrab (no ffmpeg needed)",
             "action": "screenshot",
         })
 
         items.append({"text": "", "subtext": "", "action": None})
+
+        # Encoder info
+        items.append({
+            "text": "Encoder",
+            "subtext": self.recorder.ffmpeg_info,
+            "subcolor": COLORS["muted"],
+            "action": None,
+        })
 
         # Quality settings
         items.append({
@@ -68,6 +85,12 @@ class RecorderPage(Page):
             "subtext": str(self.recorder.fps),
             "subcolor": COLORS["accent"],
             "action": "cycle_fps",
+        })
+        items.append({
+            "text": "Resolution",
+            "subtext": f"{self.recorder.fb_width}x{self.recorder.fb_height}",
+            "subcolor": COLORS["muted"],
+            "action": None,
         })
 
         items.append({"text": "", "subtext": "", "action": None})

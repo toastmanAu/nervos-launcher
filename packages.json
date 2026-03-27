@@ -149,6 +149,46 @@
           "archive": true
         }
       }
+    },
+    {
+      "name": "ffmpeg-full",
+      "description": "Full ffmpeg — all codecs (h264, h265, vp9, aac, mp3). ~70MB",
+      "version": "7.1",
+      "category": "media",
+      "homepage": "https://johnvansickle.com/ffmpeg/",
+      "binaries": {
+        "arm64": {
+          "url": "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz",
+          "bin": "ffmpeg",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz",
+          "bin": "ffmpeg",
+          "archive": true
+        }
+      },
+      "post_install": []
+    },
+    {
+      "name": "ffmpeg-lite",
+      "description": "Minimal ffmpeg — h264 + mp4 only, screen recording. ~20MB",
+      "version": "7.1",
+      "category": "media",
+      "homepage": "https://johnvansickle.com/ffmpeg/",
+      "binaries": {
+        "arm64": {
+          "url": "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz",
+          "bin": "ffmpeg",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz",
+          "bin": "ffmpeg",
+          "archive": true
+        }
+      },
+      "post_install": []
     }
   ]
 }

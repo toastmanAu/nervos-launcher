@@ -16,6 +16,15 @@ import os
 import time
 import signal
 
+# Preferred ffmpeg paths — our installed copy first, then system
+FFMPEG_PATHS = [
+    "/userdata/ckb-light-client/packages/bin/ffmpeg",  # our package manager install
+    os.path.expanduser("~/ckb-light-client/packages/bin/ffmpeg"),
+    "/usr/bin/ffmpeg",
+    "/usr/local/bin/ffmpeg",
+    "ffmpeg",  # PATH fallback
+]
+
 
 class ScreenRecorder:
     """Framebuffer screen recorder using ffmpeg as a detached process."""
@@ -36,6 +45,49 @@ class ScreenRecorder:
         self.fb_height = 480
         self.fb_bpp = 32
         self._detect_framebuffer()
+
+    def _find_ffmpeg(self):
+        """Find the best available ffmpeg binary."""
+        for path in FFMPEG_PATHS:
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return path
+        # Last resort — check PATH
+        try:
+            result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True, timeout=3)
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except:
+            pass
+        return None
+
+    @property
+    def ffmpeg_path(self):
+        """Cached ffmpeg path."""
+        if not hasattr(self, '_ffmpeg_path') or self._ffmpeg_path is None:
+            self._ffmpeg_path = self._find_ffmpeg()
+        return self._ffmpeg_path
+
+    @property
+    def ffmpeg_available(self):
+        return self.ffmpeg_path is not None
+
+    @property
+    def ffmpeg_info(self):
+        """Return info about the ffmpeg we'll use."""
+        path = self.ffmpeg_path
+        if not path:
+            return "not installed"
+        is_ours = "packages/bin" in path
+        try:
+            result = subprocess.run([path, "-version"], capture_output=True, text=True, timeout=3)
+            ver = result.stdout.split("\n")[0] if result.stdout else "unknown"
+            has_x264 = "libx264" in (result.stdout + result.stderr)
+        except:
+            ver = "unknown"
+            has_x264 = False
+        source = "installed" if is_ours else "system"
+        codec = "h264 (libx264)" if has_x264 else "mpeg4 (fallback)"
+        return f"{source} — {codec}"
 
     def _detect_framebuffer(self):
         """Read framebuffer dimensions from sysfs."""
@@ -115,24 +167,56 @@ class ScreenRecorder:
             except:
                 pass
 
+    def _detect_encoder(self):
+        """Find the best available h264 encoder."""
+        ff = self.ffmpeg_path
+        if not ff:
+            return "mpeg4", "-b:v 3M"
+        try:
+            result = subprocess.run(
+                [ff, "-codecs"], capture_output=True, text=True, timeout=5)
+            codecs = result.stdout + result.stderr
+            # Prefer libx264, fall back to v4l2m2m, then mpeg4
+            if "libx264" in codecs and "--enable-libx264" in codecs:
+                return "libx264", f"-preset {self._preset} -crf {self._crf}"
+            elif "h264_v4l2m2m" in codecs:
+                # Hardware encoder — no preset/crf, use bitrate
+                bitrates = {"low": "1M", "medium": "3M", "high": "6M"}
+                br = bitrates.get(self.quality, "3M")
+                return "h264_v4l2m2m", f"-b:v {br}"
+            elif "mpeg4" in codecs:
+                bitrates = {"low": "1M", "medium": "3M", "high": "6M"}
+                br = bitrates.get(self.quality, "3M")
+                return "mpeg4", f"-b:v {br}"
+        except:
+            pass
+        # Last resort
+        return "mpeg4", "-b:v 3M"
+
     def start(self):
         """Start recording. ffmpeg runs fully detached — survives app exit."""
         if self.recording:
+            return False
+
+        ff = self.ffmpeg_path
+        if not ff:
             return False
 
         os.makedirs(self.output_dir, exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         outfile = os.path.join(self.output_dir, f"rec_{timestamp}.mp4")
 
+        encoder, enc_opts = self._detect_encoder()
+
         # Build ffmpeg command
         cmd = (
-            f'nohup setsid ffmpeg -y '
+            f'nohup setsid {ff} -y '
             f'-f rawvideo -pixel_format {self._pixel_format} '
             f'-video_size {self.fb_width}x{self.fb_height} '
             f'-framerate {self.fps} '
             f'-i {self.fb_device} '
-            f'-c:v libx264 -preset {self._preset} -crf {self._crf} '
-            f'-pix_fmt yuv420p -movflags +faststart '
+            f'-c:v {encoder} {enc_opts} '
+            f'-pix_fmt yuv420p '
             f'"{outfile}" '
             f'> /dev/null 2>&1 &'
         )
@@ -216,7 +300,7 @@ class ScreenRecorder:
 
         # Try fbgrab first
         try:
-            result = subprocess.run(["fbgrab", filename], capture_output=True, timeout=5)
+            result = subprocess.run(["fbgrab", "-d", self.fb_device, filename], capture_output=True, timeout=5)
             if result.returncode == 0 and os.path.exists(filename):
                 return filename
         except:
