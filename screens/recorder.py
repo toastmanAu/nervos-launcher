@@ -174,6 +174,11 @@ class RecorderPage(Page):
             fb_info = f"Framebuffer: {self.recorder.fb_width}x{self.recorder.fb_height} {self.recorder.fb_bpp}bpp"
             draw_text(surface, fb_info, margin + 12, y + 28, COLORS["dim"], size=10)
 
+        # Status message — positioned 1px below the panel
+        if self.message and not self.confirm_delete:
+            msg_y = 38 + 52 + 1  # panel y + panel height + 1px gap
+            draw_text(surface, self.message, margin + 12, msg_y, COLORS["green"], size=12)
+
         self.menu.draw(surface)
 
         # Confirm delete overlay
@@ -188,10 +193,6 @@ class RecorderPage(Page):
                       COLORS["muted"], size=11, max_width=int(w * 0.6))
             draw_nav_bar(surface, [("A", "Yes, delete"), ("B", "Cancel")])
             return
-
-        if self.message:
-            draw_text(surface, self.message, margin, surface.get_height() - 58,
-                      COLORS["green"], size=12)
 
         # Dynamic nav bar based on selected item
         selected = self.menu.get_selected()
