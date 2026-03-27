@@ -243,10 +243,10 @@ class ScreenRecorder:
 
         encoder, enc_opts = self._detect_encoder()
 
-        # Build audio input args if available and enabled
+        # Build audio input args — only if ffmpeg actually supports pulse
         audio_args = ""
         audio_enc = ""
-        if self.record_audio and self.audio_source:
+        if self.record_audio and self.audio_available:
             audio_args = f'-f pulse -i "{self.audio_source}"'
             audio_enc = "-c:a aac -b:a 128k"
 
