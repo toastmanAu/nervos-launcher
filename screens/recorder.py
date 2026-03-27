@@ -20,6 +20,7 @@ class RecorderPage(Page):
         self.menu = ScrollList([], item_height=30, visible_area_top=100, visible_area_bottom=32)
         self.message = ""
         self.message_timer = 0
+        self.confirm_delete = None  # path pending deletion confirmation
 
     def on_enter(self):
         self._rebuild_menu()
@@ -109,8 +110,9 @@ class RecorderPage(Page):
                 items.append({
                     "text": f"{icon} {rec['name']}",
                     "subtext": rec["size"],
-                    "action": "delete",
+                    "action": "view_file",
                     "path": rec["path"],
+                    "file_type": rec["type"],
                 })
         else:
             items.append({
@@ -158,84 +160,136 @@ class RecorderPage(Page):
 
         self.menu.draw(surface)
 
+        # Confirm delete overlay
+        if self.confirm_delete:
+            overlay_y = surface.get_height() // 2 - 30
+            overlay = pygame.Rect(int(w * 0.1), overlay_y, int(w * 0.8), 60)
+            draw_box(surface, overlay, fill=COLORS["surface"], border=COLORS["red"])
+            draw_text(surface, "Delete this file?", int(w * 0.15), overlay_y + 8,
+                      COLORS["red"], size=14, bold=True)
+            fname = os.path.basename(self.confirm_delete)
+            draw_text(surface, fname, int(w * 0.15), overlay_y + 28,
+                      COLORS["muted"], size=11, max_width=int(w * 0.6))
+            draw_nav_bar(surface, [("A", "Yes, delete"), ("B", "Cancel")])
+            return
+
         if self.message:
             draw_text(surface, self.message, margin, surface.get_height() - 58,
                       COLORS["green"], size=12)
 
-        draw_nav_bar(surface, [("B", "Back"), ("A", "Action"), ("D-pad", "Scroll")])
+        # Dynamic nav bar based on selected item
+        selected = self.menu.get_selected()
+        action = selected.get("action", "") if selected else ""
+
+        if action == "start":
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Start Recording"), ("D-pad", "Scroll")])
+        elif action == "stop":
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Stop Recording")])
+        elif action == "screenshot":
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Take Screenshot")])
+        elif action == "view_file":
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Info"), ("Y", "Delete"), ("D-pad", "Scroll")])
+        elif action in ("cycle_quality", "cycle_fps"):
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Change"), ("D-pad", "Scroll")])
+        elif action == "change_output":
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Browse"), ("D-pad", "Scroll")])
+        else:
+            draw_nav_bar(surface, [("B", "Back"), ("A", "Select"), ("D-pad", "Scroll")])
 
     def handle_input(self, event):
+        # ── Confirm delete dialog ────────────────────────────
+        if self.confirm_delete:
+            if event.type == pygame.JOYBUTTONDOWN:
+                btn = event.dict.get("btn", "")
+                if btn == "a":
+                    # Confirmed
+                    if self.recorder.delete(self.confirm_delete):
+                        self._set_message("Deleted")
+                    self.confirm_delete = None
+                    self._rebuild_menu()
+                    return True
+                elif btn == "b":
+                    # Cancelled
+                    self.confirm_delete = None
+                    return True
+            return True  # absorb all input while dialog shown
+
+        # ── D-pad scroll ─────────────────────────────────────
         if event.type == pygame.USEREVENT:
             d = event.dict.get("dpad", "")
             if d == "up": self.menu.move(-1)
             elif d == "down": self.menu.move(1)
             return True
 
-        if event.type == pygame.JOYBUTTONDOWN and event.dict.get("btn") == "a":
+        if event.type == pygame.JOYBUTTONDOWN:
+            btn = event.dict.get("btn", "")
             selected = self.menu.get_selected()
-            if not selected or not selected.get("action"):
-                return True
-            action = selected["action"]
+            action = selected.get("action", "") if selected else ""
 
-            if action == "start":
-                if self.recorder.start():
-                    # timer resets automatically via state files
-                    self._set_message("Recording started")
-                else:
-                    self._set_message("Failed to start recording")
-                self._rebuild_menu()
-
-            elif action == "stop":
-                saved = self.recorder.stop()
-                if saved:
-                    size = os.path.getsize(saved) / (1024 * 1024)
-                    self._set_message(f"Saved: {size:.1f}MB")
-                else:
-                    self._set_message("Recording failed")
-                # timer resets automatically via state files
-                self._rebuild_menu()
-
-            elif action == "screenshot":
-                path = self.recorder.screenshot()
-                if path:
-                    self._set_message(f"Screenshot saved")
-                else:
-                    self._set_message("Screenshot failed")
-                self._rebuild_menu()
-
-            elif action == "cycle_quality":
-                qualities = ["low", "medium", "high"]
-                idx = qualities.index(self.recorder.quality) if self.recorder.quality in qualities else 0
-                self.recorder.quality = qualities[(idx + 1) % len(qualities)]
-                self._rebuild_menu()
-
-            elif action == "cycle_fps":
-                fps_opts = [15, 24, 30, 60]
-                idx = fps_opts.index(self.recorder.fps) if self.recorder.fps in fps_opts else 2
-                self.recorder.fps = fps_opts[(idx + 1) % len(fps_opts)]
-                self._rebuild_menu()
-
-            elif action == "change_output":
-                if "fileman" in self.app.pages:
-                    def on_dir_selected(path):
-                        self.recorder.output_dir = path
-                        self._set_message(f"Output: {path}")
-                        self._rebuild_menu()
-                    self.app.pages["fileman"].open(
-                        start_path=self.recorder.output_dir,
-                        mode="dir",
-                        title="Recording Output",
-                        on_select=on_dir_selected,
-                    )
-                    self.app.navigate("fileman")
-
-            elif action == "delete":
-                path = selected.get("path", "")
-                if path and self.recorder.delete(path):
-                    self._set_message("Deleted")
+            # ── A button: primary action ─────────────────────
+            if btn == "a":
+                if action == "start":
+                    if self.recorder.start():
+                        self._set_message("Recording started")
+                    else:
+                        self._set_message("Failed to start recording")
                     self._rebuild_menu()
 
-            return True
+                elif action == "stop":
+                    saved = self.recorder.stop()
+                    if saved:
+                        size = os.path.getsize(saved) / (1024 * 1024)
+                        self._set_message(f"Saved: {size:.1f}MB")
+                    else:
+                        self._set_message("Recording failed")
+                    self._rebuild_menu()
+
+                elif action == "screenshot":
+                    path = self.recorder.screenshot()
+                    if path:
+                        self._set_message("Screenshot saved")
+                    else:
+                        self._set_message("Screenshot failed")
+                    self._rebuild_menu()
+
+                elif action == "cycle_quality":
+                    qualities = ["low", "medium", "high"]
+                    idx = qualities.index(self.recorder.quality) if self.recorder.quality in qualities else 0
+                    self.recorder.quality = qualities[(idx + 1) % len(qualities)]
+                    self._rebuild_menu()
+
+                elif action == "cycle_fps":
+                    fps_opts = [15, 24, 30, 60]
+                    idx = fps_opts.index(self.recorder.fps) if self.recorder.fps in fps_opts else 2
+                    self.recorder.fps = fps_opts[(idx + 1) % len(fps_opts)]
+                    self._rebuild_menu()
+
+                elif action == "change_output":
+                    if "fileman" in self.app.pages:
+                        def on_dir_selected(path):
+                            self.recorder.output_dir = path
+                            self._set_message(f"Output: {path}")
+                            self._rebuild_menu()
+                        self.app.pages["fileman"].open(
+                            start_path=self.recorder.output_dir,
+                            mode="dir",
+                            title="Recording Output",
+                            on_select=on_dir_selected,
+                        )
+                        self.app.navigate("fileman")
+
+                elif action == "view_file":
+                    path = selected.get("path", "")
+                    self._set_message(path)
+
+                return True
+
+            # ── Y button: delete (files only) ────────────────
+            if btn == "y" and action == "view_file":
+                path = selected.get("path", "")
+                if path:
+                    self.confirm_delete = path
+                return True
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP: self.menu.move(-1)
