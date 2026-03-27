@@ -4,7 +4,7 @@ List shows peer IDs, press A to see full detail for selected peer.
 """
 
 import pygame
-from lib.ui import Page, ScrollList, COLORS, draw_text, draw_status_bar, draw_nav_bar, draw_hline
+from lib.ui import Page, ScrollList, COLORS, draw_text, draw_status_bar, draw_nav_bar, draw_hline, get_font
 
 
 class PeersPage(Page):
