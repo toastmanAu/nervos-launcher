@@ -9,14 +9,22 @@ Nervos Blockchain App Store for retro gaming handhelds. Install and manage the C
 A pygame-based app that runs as an EmulationStation port. Self-bootstrapping — just drop the launcher script on your device and it downloads everything from GitHub on first run.
 
 **Screens:**
-- **Home** — Dashboard with live sync status, block height, peer count
-- **Explorer** — Tip header details, epoch, timestamps, hashes
-- **Peers** — Connected peers list with drill-down detail view
-- **Settings** — Install/update light client, start/stop service, boot toggle, config/log viewer
-- **Terminal** — Mini shell with quick commands, scrollback, command history
-- **Button Mapping** — First-boot gamepad configuration (d-pad, thumbstick, face buttons)
+- **Home** — Dashboard with live sync status, block height, peer count, full node ID and tip hash
+- **Explorer** — Scrollable tip header with full hashes, epoch, timestamps, word wrapping
+- **Peers** — Connected peers list with drill-down detail view (addresses, protocols, duration)
+- **Recorder** — Screen + audio capture via ffmpeg. Records while playing games. Detached process survives app exit
+- **Settings** — Install/update light client, start/stop service, persistent auto-start, editable config.toml with reset-to-default
+- **Terminal** — 5 command categories (RPC, Service, System, Network, Install), on-screen keyboard for custom commands, user-editable command JSON
+- **Button Mapping** — First-boot gamepad configuration (d-pad, thumbstick, face buttons — 12 inputs)
 
-**Built-in installer** — downloads the CKB light client binary directly from GitHub releases. No SSH or PC required after initial setup.
+**Key Features:**
+- **Screen Recorder** — h264 video + AAC audio via custom ffmpeg build (11MB). Records the entire handheld screen including games, ES menus, everything. Background process persists across app exit
+- **On-Screen Keyboard** — 5 charsets (abc, ABC, 123, hex, symbols), minimisable, works with any gamepad
+- **Config Editor** — Edit config.toml with syntax highlighting, reset to default from GitHub
+- **Package Manager** — JSON registry of static binaries (no apt/pacman needed). Install jq, micro, ffmpeg, and more
+- **File Manager** — Browse directories, select output paths, view file info
+- **Built-in Installer** — Downloads the CKB light client binary directly from GitHub releases. No SSH or PC required after initial setup
+- **Auto-install Dependencies** — Bootstrap script detects and installs Python + pygame if missing
 
 ## Install on Your Handheld
 
@@ -122,17 +130,23 @@ nervos-launcher/
 ├── lib/
 │   ├── ui.py                # App, Page, ScrollList, theme, widgets
 │   ├── rpc.py               # Light client RPC wrapper + background poller
-│   └── installer.py         # Download engine with live progress
+│   ├── installer.py         # Download engine with live progress
+│   ├── packages.py          # Package manager (JSON registry + static binaries)
+│   ├── keyboard.py          # On-screen keyboard (5 charsets, minimisable)
+│   ├── editor.py            # Reusable text editor with syntax highlighting
+│   ├── recorder.py          # Screen + audio recorder (detached ffmpeg)
+│   └── fileman.py           # File manager / directory browser
 ├── screens/
 │   ├── home.py              # Dashboard
-│   ├── explorer.py          # Block explorer
-│   ├── peers.py             # Peer list + detail view
-│   ├── settings.py          # Service management + installer
-│   ├── terminal.py          # Mini shell
-│   ├── text_viewer.py       # Generic scrollable text
+│   ├── explorer.py          # Block explorer (scrollable, full hashes)
+│   ├── peers.py             # Peer list + detail view (word wrapping)
+│   ├── recorder.py          # Recorder control screen
+│   ├── settings.py          # Service management + installer + config editor
+│   ├── terminal.py          # Mini shell (5 categories, keyboard input)
 │   ├── install_progress.py  # Live install progress
-│   └── button_map.py        # First-boot input configuration
-├── assets/                  # Box art, images
+│   └── button_map.py        # First-boot input configuration (12 inputs)
+├── packages.json            # Package registry (static binaries)
+├── assets/                  # Box art, demo videos
 ├── deploy.sh                # Remote SSH deployer
 ├── verify.sh                # Health check report generator
 └── tested/                  # Verified device reports
@@ -144,6 +158,16 @@ nervos-launcher/
 
 This is currently **testnet only** — no mainnet support until thoroughly tested.
 
+## Demo Videos
+
+All recorded natively on the RG35XX H using the built-in screen recorder:
+
+- **[Full Walkthrough](assets/nervos-launcher-demo.mp4)** — 4 min, complete tour of all features
+- **[Game Recording with Audio](assets/game-recording-with-audio.mp4)** — 3 min, SNES gameplay + BGM audio capture
+- **[First Run Setup](assets/first-run.mp4)** — Button mapping + initial configuration
+- **[Terminal Demo](assets/terminal-demo.mp4)** — Command categories, RPC queries
+- **[Launcher Promo](assets/launcher-promo.mp4)** — Highlight reel
+
 ## Roadmap
 
 ### Phase 1 — Core Platform (current)
@@ -152,6 +176,10 @@ This is currently **testnet only** — no mainnet support until thoroughly teste
 - [x] CKB light client installer with live progress
 - [x] Block explorer, peer detail, terminal
 - [x] On-screen keyboard + text editor
+- [x] Screen recorder with audio (custom ffmpeg, h264 + AAC + PulseAudio)
+- [x] Package manager (JSON registry, static binaries)
+- [x] File manager widget
+- [x] Config editor with syntax highlighting + reset
 - [x] Package manager (JSON registry + static binaries)
 - [x] Screen recorder (ffmpeg, detached process)
 - [x] File manager widget
