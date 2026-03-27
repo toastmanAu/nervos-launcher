@@ -20,7 +20,6 @@ class RecorderPage(Page):
         self.menu = ScrollList([], item_height=30, visible_area_top=100, visible_area_bottom=32)
         self.message = ""
         self.message_timer = 0
-        self.record_timer = 0  # seconds recording
 
     def on_enter(self):
         self._rebuild_menu()
@@ -30,8 +29,6 @@ class RecorderPage(Page):
             self.message_timer -= dt
             if self.message_timer <= 0:
                 self.message = ""
-        if self.recorder.recording:
-            self.record_timer += dt / 1000.0
 
     def _rebuild_menu(self):
         items = []
@@ -39,7 +36,7 @@ class RecorderPage(Page):
         if self.recorder.recording:
             items.append({
                 "text": "Stop Recording",
-                "subtext": f"{self.record_timer:.0f}s",
+                "subtext": f"{self.recorder.record_seconds:.0f}s",
                 "subcolor": COLORS["red"],
                 "action": "stop",
             })
@@ -117,8 +114,8 @@ class RecorderPage(Page):
             draw_box(surface, panel, fill=COLORS["surface"], border=border)
             pygame.draw.circle(surface, COLORS["red"], (margin + 18, y + 16), 6)
             draw_text(surface, "RECORDING", margin + 30, y + 8, COLORS["red"], size=14, bold=True)
-            mins = int(self.record_timer // 60)
-            secs = int(self.record_timer % 60)
+            mins = int(self.recorder.record_seconds // 60)
+            secs = int(self.recorder.record_seconds % 60)
             draw_text(surface, f"{mins:02d}:{secs:02d}", margin + 30, y + 28, COLORS["text"], size=12)
             # File size estimate
             draw_text(surface, self.recorder.current_file.split("/")[-1],
@@ -153,7 +150,7 @@ class RecorderPage(Page):
 
             if action == "start":
                 if self.recorder.start():
-                    self.record_timer = 0
+                    # timer resets automatically via state files
                     self._set_message("Recording started")
                 else:
                     self._set_message("Failed to start recording")
@@ -166,7 +163,7 @@ class RecorderPage(Page):
                     self._set_message(f"Saved: {size:.1f}MB")
                 else:
                     self._set_message("Recording failed")
-                self.record_timer = 0
+                # timer resets automatically via state files
                 self._rebuild_menu()
 
             elif action == "screenshot":
