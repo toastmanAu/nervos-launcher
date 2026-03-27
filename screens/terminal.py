@@ -262,7 +262,7 @@ class TerminalPage(Page):
         pcolor = COLORS["accent"] if self.input_buffer or self.busy else COLORS["muted"]
         draw_text(surface, prompt + cursor, margin, input_y + 2, pcolor, size=self.FONT_SIZE)
 
-        draw_nav_bar(surface, [("A", "Run"), ("X/Y", "Cat"), ("L1/R1", "Cmd")])
+        draw_nav_bar(surface, [("A", "Run"), ("X/Y", "Cat"), ("L1/R1", "Cmd"), ("SEL", "Edit")])
 
     def handle_input(self, event):
         if event.type == pygame.USEREVENT:
