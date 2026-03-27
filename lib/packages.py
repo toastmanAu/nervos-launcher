@@ -133,7 +133,7 @@ class PackageManager:
         binary_info = binaries[self.arch]
         url = binary_info["url"]
         bin_name = binary_info.get("bin", name)
-        is_archive = binary_info.get("archive", url.endswith(".tar.gz") or url.endswith(".zip"))
+        is_archive = binary_info.get("archive", url.endswith(".tar.gz") or url.endswith(".tar.xz") or url.endswith(".zip"))
 
         if p: p.step(f"Installing {name}")
         if p: p.info(f"Arch: {self.arch}")
@@ -143,28 +143,52 @@ class PackageManager:
             dest = os.path.join(self.bin_dir, bin_name)
 
             if is_archive:
-                # Download archive
+                # Download archive — detect compression from URL
                 if p: p.step(f"Downloading {name}")
-                tarball = f"/tmp/nervos-pkg-{name}.tar.gz"
+                if url.endswith(".tar.xz"):
+                    tarball = f"/tmp/nervos-pkg-{name}.tar.xz"
+                    tar_flags = "-xJf"  # xz
+                elif url.endswith(".tar.gz") or url.endswith(".tgz"):
+                    tarball = f"/tmp/nervos-pkg-{name}.tar.gz"
+                    tar_flags = "-xzf"  # gzip
+                else:
+                    tarball = f"/tmp/nervos-pkg-{name}.tar.gz"
+                    tar_flags = "-xf"   # auto-detect
                 self._download(url, tarball, p)
 
                 # Extract
                 if p: p.step("Extracting")
-                subprocess.run(f"cd /tmp && tar -xzf nervos-pkg-{name}.tar.gz",
-                               shell=True, capture_output=True, timeout=30)
-
-                # Find the binary
                 result = subprocess.run(
-                    f"find /tmp -name '{bin_name}' -type f | head -1",
+                    f"cd /tmp && tar {tar_flags} {tarball}",
+                    shell=True, capture_output=True, text=True, timeout=120)
+                if result.returncode != 0:
+                    if p: p.error(f"Extract failed: {result.stderr[:80]}")
+                    return False
+
+                # Find the binary — search recursively
+                if p: p.info(f"Looking for '{bin_name}'...")
+                result = subprocess.run(
+                    f"find /tmp -name '{bin_name}' -type f -executable 2>/dev/null | head -1",
                     shell=True, capture_output=True, text=True, timeout=10)
                 found = result.stdout.strip()
+
+                # Fallback: find any file with that name (might not have +x yet)
+                if not found:
+                    result = subprocess.run(
+                        f"find /tmp -name '{bin_name}' -type f 2>/dev/null | head -1",
+                        shell=True, capture_output=True, text=True, timeout=10)
+                    found = result.stdout.strip()
 
                 if not found:
                     if p: p.error(f"Binary '{bin_name}' not found in archive")
                     return False
 
+                if p: p.ok(f"Found: {found}")
                 subprocess.run(["cp", found, dest], check=True, timeout=5)
-                os.remove(tarball)
+                try:
+                    os.remove(tarball)
+                except:
+                    pass
             else:
                 # Direct binary download
                 if p: p.step(f"Downloading {name}")

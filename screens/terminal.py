@@ -182,7 +182,7 @@ class TerminalPage(Page):
                     full_cmd = cmd
                 result = subprocess.run(
                     full_cmd, shell=True,
-                    capture_output=True, text=True, timeout=15,
+                    capture_output=True, text=True, timeout=300,
                     cwd=self.install_dir
                 )
                 for line in result.stdout.splitlines():
