@@ -33,7 +33,7 @@ class ScreenRecorder:
         self.output_dir = output_dir
         self.fps = 30
         self.quality = "medium"  # "low", "medium", "high"
-        self.record_audio = False  # requires static ffmpeg with --enable-libpulse
+        self.record_audio = True  # auto-detected — needs ffmpeg with pulse support
 
         # State file — persists across app restarts
         self._pid_file = os.path.join(output_dir, ".rec.pid")
