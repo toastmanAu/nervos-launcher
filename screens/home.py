@@ -50,21 +50,30 @@ class HomePage(Page):
         y += 8
 
         # Info grid
+        margin = int(w * 0.025)
+        content_w = w - margin * 2
         peers = s.get("peers", 0)
         node_id = s.get("node_id", "—")
         block_hash = s.get("block_hash", "—")
 
-        grid = [
-            ("Peers", str(peers), COLORS["green"] if peers > 0 else COLORS["red"]),
-            ("Network", self._get_network(), COLORS["text"]),
-            ("Node ID", node_id[:16] + "..." if len(node_id) > 16 else node_id, COLORS["muted"]),
-            ("Tip Hash", block_hash, COLORS["muted"]),
-        ]
+        # Inline fields (short values)
+        draw_text(surface, "Peers", margin, y, COLORS["muted"], size=11)
+        draw_text(surface, str(peers), margin + 70, y,
+                  COLORS["green"] if peers > 0 else COLORS["red"], size=12)
+        draw_text(surface, "Network", int(w * 0.35), y, COLORS["muted"], size=11)
+        draw_text(surface, self._get_network(), int(w * 0.35) + 70, y, COLORS["text"], size=12)
+        y += 20
 
-        for label, value, color in grid:
-            draw_text(surface, label, 16, y, COLORS["muted"], size=11)
-            draw_text(surface, value, 120, y, color, size=12)
-            y += 22
+        # Full-width fields (label above, value below — no cropping)
+        draw_text(surface, "NODE ID", margin, y, COLORS["muted"], size=10, bold=True)
+        y += 14
+        draw_text(surface, node_id, margin, y, COLORS["muted"], size=11, max_width=content_w)
+        y += 16
+
+        draw_text(surface, "TIP HASH", margin, y, COLORS["muted"], size=10, bold=True)
+        y += 14
+        draw_text(surface, block_hash, margin, y, COLORS["muted"], size=11, max_width=content_w)
+        y += 16
 
         y += 8
         draw_hline(surface, y)
