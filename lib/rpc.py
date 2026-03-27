@@ -117,7 +117,7 @@ class LightClientRPC:
             inner = tip.get("inner", tip)  # handle both nested and flat
             number = inner.get("number", "0x0")
             status["block"] = int(number, 16) if isinstance(number, str) else number
-            status["block_hash"] = inner.get("hash", "")[:18] + "..."
+            status["block_hash"] = inner.get("hash", "")
             status["epoch"] = inner.get("epoch", "")
             ts = inner.get("timestamp", "0x0")
             status["timestamp"] = int(ts, 16) if isinstance(ts, str) else ts

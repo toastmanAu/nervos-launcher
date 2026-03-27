@@ -188,29 +188,57 @@ class PeerDetailPage(Page):
     def visible_lines(self):
         return (self.app.height - 32 - 28) // 18
 
+    def _wrap_text(self, text, font, max_w):
+        """Wrap text into lines that fit within max_w pixels."""
+        if not text or font.size(text)[0] <= max_w:
+            return [text]
+        lines = []
+        while text:
+            fit = len(text)
+            while fit > 0 and font.size(text[:fit])[0] > max_w:
+                fit -= 1
+            if fit == 0:
+                fit = 1
+            lines.append(text[:fit])
+            text = text[fit:]
+        return lines
+
     def draw(self, surface):
         w = surface.get_width()
         h = surface.get_height()
         margin = int(w * 0.025)
         content_w = w - margin * 2
+        bottom = h - 28
 
         draw_status_bar(surface, "Peer Detail", "")
 
+        # Pre-render all wrapped lines for scrolling
+        font_val = get_font(13)
+        render_lines = []  # (text, color, is_label)
+        for text, color, is_label in self.lines:
+            if not text:
+                render_lines.append(("", None, False))
+            elif is_label:
+                render_lines.append((text, color, True))
+            else:
+                wrapped = self._wrap_text(text, font_val, content_w)
+                for wline in wrapped:
+                    render_lines.append((wline, color, False))
+
         y = 38
-        vis = self.visible_lines
-        total = len(self.lines)
+        total = len(render_lines)
+        vis = (bottom - 38) // 18
 
         for i in range(self.scroll, min(self.scroll + vis, total)):
-            text, color, is_label = self.lines[i]
-            if not text:
+            text, color, is_label = render_lines[i]
+            if not text and color is None:
                 y += 6
                 continue
             if is_label:
                 draw_text(surface, text, margin, y, color or COLORS["muted"], size=10, bold=True)
                 y += 16
             else:
-                draw_text(surface, text, margin, y, color or COLORS["text"], size=13,
-                          max_width=content_w)
+                draw_text(surface, text, margin, y, color or COLORS["text"], size=13)
                 y += 18
 
         # Scroll indicator
@@ -219,20 +247,28 @@ class PeerDetailPage(Page):
             bar_h = max(10, int((vis / total) * bar_area))
             bar_y = 38 + int((self.scroll / max(1, total)) * bar_area)
             bar_y = min(bar_y, 38 + bar_area - bar_h)
-            pygame.draw.rect(surface, COLORS["dim"], (636, bar_y, 3, bar_h), border_radius=2)
+            pygame.draw.rect(surface, COLORS["dim"], (w - 4, bar_y, 3, bar_h), border_radius=2)
+
+        # Store wrapped count for scroll bounds
+        self._rendered_total = total
+        self._rendered_vis = vis
 
         draw_nav_bar(surface, [("B", "Back"), ("D-pad", "Scroll")])
 
     def handle_input(self, event):
+        total = getattr(self, '_rendered_total', len(self.lines))
+        vis = getattr(self, '_rendered_vis', self.visible_lines)
+        max_scroll = max(0, total - vis)
+
         if event.type == pygame.USEREVENT:
             d = event.dict.get("dpad", "")
             if d == "up": self.scroll = max(0, self.scroll - 2)
-            elif d == "down": self.scroll = min(max(0, len(self.lines) - self.visible_lines), self.scroll + 2)
+            elif d == "down": self.scroll = min(max_scroll, self.scroll + 2)
             return True
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP: self.scroll = max(0, self.scroll - 2)
-            elif event.key == pygame.K_DOWN: self.scroll = min(max(0, len(self.lines) - self.visible_lines), self.scroll + 2)
+            elif event.key == pygame.K_DOWN: self.scroll = min(max_scroll, self.scroll + 2)
             return True
 
         return False
