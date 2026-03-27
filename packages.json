@@ -1,0 +1,154 @@
+{
+  "_comment": "Nervos Launcher Package Registry — static binaries, no package manager needed",
+  "_arch_note": "arm64 = aarch64 Linux, x86_64 = Intel/AMD Linux",
+  "_contribute": "PR to add packages: https://github.com/toastmanAu/nervos-launcher",
+  "packages": [
+    {
+      "name": "ckb-light-client",
+      "description": "CKB light client — sync headers, query chain state",
+      "version": "0.5.5-rc1",
+      "category": "blockchain",
+      "homepage": "https://github.com/nervosnetwork/ckb-light-client",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/nervosnetwork/ckb-light-client/releases/download/v0.5.5-rc1/ckb-light-client_v0.5.5-rc1-aarch64-linux-portable.tar.gz",
+          "bin": "ckb-light-client",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://github.com/nervosnetwork/ckb-light-client/releases/download/v0.5.5-rc1/ckb-light-client_v0.5.5-rc1-x86_64-linux-portable.tar.gz",
+          "bin": "ckb-light-client",
+          "archive": true
+        }
+      }
+    },
+    {
+      "name": "jq",
+      "description": "JSON processor — pretty print and filter JSON",
+      "version": "1.7.1",
+      "category": "tools",
+      "homepage": "https://github.com/jqlang/jq",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64",
+          "bin": "jq",
+          "archive": false
+        },
+        "x86_64": {
+          "url": "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64",
+          "bin": "jq",
+          "archive": false
+        }
+      }
+    },
+    {
+      "name": "htop",
+      "description": "Interactive process viewer",
+      "version": "3.3.0",
+      "category": "tools",
+      "homepage": "https://github.com/htop-dev/htop",
+      "binaries": {
+        "x86_64": {
+          "url": "https://github.com/KittyKatt/htop-static/releases/download/v3.3.0/htop-3.3.0-x86_64",
+          "bin": "htop",
+          "archive": false
+        }
+      }
+    },
+    {
+      "name": "micro",
+      "description": "Modern terminal text editor (nano replacement)",
+      "version": "2.0.14",
+      "category": "tools",
+      "homepage": "https://github.com/zyedidia/micro",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/zyedidia/micro/releases/download/v2.0.14/micro-2.0.14-linux-arm64.tar.gz",
+          "bin": "micro",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://github.com/zyedidia/micro/releases/download/v2.0.14/micro-2.0.14-linux64.tar.gz",
+          "bin": "micro",
+          "archive": true
+        }
+      }
+    },
+    {
+      "name": "btm",
+      "description": "System monitor (better top) — CPU, memory, network, disk",
+      "version": "0.10.2",
+      "category": "tools",
+      "homepage": "https://github.com/ClementTsang/bottom",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/ClementTsang/bottom/releases/download/0.10.2/bottom_aarch64-unknown-linux-gnu.tar.gz",
+          "bin": "btm",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://github.com/ClementTsang/bottom/releases/download/0.10.2/bottom_x86_64-unknown-linux-gnu.tar.gz",
+          "bin": "btm",
+          "archive": true
+        }
+      }
+    },
+    {
+      "name": "duf",
+      "description": "Disk usage (better df) — colorful disk info",
+      "version": "0.8.1",
+      "category": "tools",
+      "homepage": "https://github.com/muesli/duf",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/muesli/duf/releases/download/v0.8.1/duf_0.8.1_linux_arm64.tar.gz",
+          "bin": "duf",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://github.com/muesli/duf/releases/download/v0.8.1/duf_0.8.1_linux_x86_64.tar.gz",
+          "bin": "duf",
+          "archive": true
+        }
+      }
+    },
+    {
+      "name": "yq",
+      "description": "YAML/JSON/TOML processor — edit config files from CLI",
+      "version": "4.44.6",
+      "category": "tools",
+      "homepage": "https://github.com/mikefarah/yq",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_arm64",
+          "bin": "yq",
+          "archive": false
+        },
+        "x86_64": {
+          "url": "https://github.com/mikefarah/yq/releases/download/v4.44.6/yq_linux_amd64",
+          "bin": "yq",
+          "archive": false
+        }
+      }
+    },
+    {
+      "name": "curlie",
+      "description": "Better curl — human-friendly HTTP client with curl power",
+      "version": "1.7.2",
+      "category": "tools",
+      "homepage": "https://github.com/rs/curlie",
+      "binaries": {
+        "arm64": {
+          "url": "https://github.com/rs/curlie/releases/download/v1.7.2/curlie_1.7.2_linux_arm64.tar.gz",
+          "bin": "curlie",
+          "archive": true
+        },
+        "x86_64": {
+          "url": "https://github.com/rs/curlie/releases/download/v1.7.2/curlie_1.7.2_linux_amd64.tar.gz",
+          "bin": "curlie",
+          "archive": true
+        }
+      }
+    }
+  ]
+}
