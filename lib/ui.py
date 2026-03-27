@@ -365,7 +365,13 @@ class App:
                     if btn_name == "b":
                         self.go_back()
                     elif btn_name == "start":
-                        self.go_home()
+                        # Let the page handle Start first — if it returns True, don't go home
+                        handled = False
+                        if self.current_page:
+                            event.dict["btn"] = btn_name
+                            handled = self.current_page.handle_input(event)
+                        if not handled:
+                            self.go_home()
                     elif self.current_page:
                         event.dict["btn"] = btn_name
                         self.current_page.handle_input(event)

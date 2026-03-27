@@ -10,6 +10,7 @@ import threading
 import json
 import os
 from lib.ui import Page, COLORS, draw_text, draw_status_bar, draw_nav_bar, get_font
+from lib.keyboard import OnScreenKeyboard
 
 
 # Default command categories — saved to JSON on first run, user-editable after
@@ -115,6 +116,7 @@ class TerminalPage(Page):
         self.history = []
         self.history_idx = -1
         self.busy = False
+        self.keyboard = OnScreenKeyboard()
 
         # Load commands
         self.commands = load_commands(install_dir)
@@ -265,9 +267,31 @@ class TerminalPage(Page):
         pcolor = COLORS["accent"] if self.input_buffer or self.busy else COLORS["muted"]
         draw_text(surface, prompt + cursor, margin, input_y + 2, pcolor, size=self.FONT_SIZE)
 
-        draw_nav_bar(surface, [("A", "Run"), ("X/Y", "Cat"), ("L1/R1", "Cmd"), ("SEL", "Edit")])
+        # Keyboard overlay
+        self.keyboard.draw(surface)
+
+        if not self.keyboard.active:
+            draw_nav_bar(surface, [("A", "Run"), ("X/Y", "Cat"), ("L1/R1", "Cmd"), ("SEL", "Edit"), ("ST", "Keyboard")])
+
+    def _open_keyboard(self):
+        """Open on-screen keyboard for typing custom commands."""
+        def on_done(text):
+            if text.strip():
+                self.input_buffer = text.strip()
+                self._run_cmd(self.input_buffer)
+                self.input_buffer = ""
+
+        self.keyboard.open(
+            initial_text=self.input_buffer,
+            on_done=on_done,
+            title="Type command",
+        )
 
     def handle_input(self, event):
+        # Keyboard gets priority when active
+        if self.keyboard.active:
+            return self.keyboard.handle_input(event)
+
         if event.type == pygame.USEREVENT:
             d = event.dict.get("dpad", "")
             if d == "up":
@@ -287,6 +311,11 @@ class TerminalPage(Page):
                     cmd = self._current_cmd
                     if cmd and cmd[1]:
                         self._run_cmd(cmd[1])
+                return True
+
+            # Start = open keyboard to type custom command
+            if btn == "start":
+                self._open_keyboard()
                 return True
 
             if btn == "x":
