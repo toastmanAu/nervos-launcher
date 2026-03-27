@@ -146,12 +146,34 @@ This is currently **testnet only** — no mainnet support until thoroughly teste
 
 ## Roadmap
 
-- [ ] Plugin manifest (JSON) for installable dApp modules
+### Phase 1 — Core Platform (current)
+- [x] Self-bootstrapping installer
+- [x] Button mapping (d-pad, thumbstick, face buttons)
+- [x] CKB light client installer with live progress
+- [x] Block explorer, peer detail, terminal
+- [x] On-screen keyboard + text editor
+- [x] Package manager (JSON registry + static binaries)
+- [x] Screen recorder (ffmpeg, detached process)
+- [x] File manager widget
+- [x] Persistent auto-start service
+- [ ] PortMaster submission for one-tap install
+
+### Phase 2 — dApp Store
+- [ ] Plugin manifest (JSON) for installable modules
 - [ ] dApp Store screen with images, descriptions, install/uninstall
+- [ ] Desktop module builder tool for developers
 - [ ] FiberQuest module (RetroArch tournaments with Fiber payments)
 - [ ] Wallet module (watch addresses, check balances)
 - [ ] DOB viewer (display Spore NFTs)
-- [ ] PortMaster submission for one-tap install
+
+### Phase 3 — Nervos OS
+- [ ] Fork Knulli/Buildroot with Nervos tools baked in
+- [ ] CKB light client as system service (not port)
+- [ ] Nervos Launcher as first-class ES app
+- [ ] Custom ES theme with blockchain category
+- [ ] Pre-configured drivers + WiFi + SSH
+- [ ] System-level package manager integration
+- [ ] Multi-device image builds (H700, RK3566, RK3588)
 
 ## Community
 

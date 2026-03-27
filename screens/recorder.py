@@ -92,6 +92,12 @@ class RecorderPage(Page):
             "subcolor": COLORS["muted"],
             "action": None,
         })
+        items.append({
+            "text": "Output Path",
+            "subtext": self.recorder.output_dir.replace("/userdata/ckb-light-client/", ""),
+            "subcolor": COLORS["accent"],
+            "action": "change_output",
+        })
 
         items.append({"text": "", "subtext": "", "action": None})
 
@@ -208,6 +214,20 @@ class RecorderPage(Page):
                 idx = fps_opts.index(self.recorder.fps) if self.recorder.fps in fps_opts else 2
                 self.recorder.fps = fps_opts[(idx + 1) % len(fps_opts)]
                 self._rebuild_menu()
+
+            elif action == "change_output":
+                if "fileman" in self.app.pages:
+                    def on_dir_selected(path):
+                        self.recorder.output_dir = path
+                        self._set_message(f"Output: {path}")
+                        self._rebuild_menu()
+                    self.app.pages["fileman"].open(
+                        start_path=self.recorder.output_dir,
+                        mode="dir",
+                        title="Recording Output",
+                        on_select=on_dir_selected,
+                    )
+                    self.app.navigate("fileman")
 
             elif action == "delete":
                 path = selected.get("path", "")
