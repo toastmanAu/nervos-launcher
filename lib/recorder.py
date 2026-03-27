@@ -208,40 +208,41 @@ class ScreenRecorder:
 
         encoder, enc_opts = self._detect_encoder()
 
-        # Build ffmpeg command
-        cmd = (
-            f'nohup setsid {ff} -y '
-            f'-f rawvideo -pixel_format {self._pixel_format} '
-            f'-video_size {self.fb_width}x{self.fb_height} '
-            f'-framerate {self.fps} '
-            f'-i {self.fb_device} '
-            f'-c:v {encoder} {enc_opts} '
-            f'-pix_fmt yuv420p '
-            f'"{outfile}" '
-            f'> /dev/null 2>&1 &'
-        )
+        # Write a launcher script — most reliable way to detach on all systems
+        launcher = os.path.join(self.output_dir, ".rec_launch.sh")
+        with open(launcher, "w") as f:
+            f.write(f"""#!/bin/sh
+{ff} -y \\
+  -f rawvideo -pixel_format {self._pixel_format} \\
+  -video_size {self.fb_width}x{self.fb_height} \\
+  -framerate {self.fps} \\
+  -i {self.fb_device} \\
+  -c:v {encoder} {enc_opts} \\
+  -pix_fmt yuv420p \\
+  "{outfile}" \\
+  > /dev/null 2>&1 &
+echo $!
+""")
+        os.chmod(launcher, 0o755)
 
         try:
-            # Launch via shell so nohup/setsid work properly
-            subprocess.run(cmd, shell=True, timeout=5)
-
-            # Give it a moment to start
-            time.sleep(0.5)
-
-            # Find the ffmpeg PID
+            # Run the launcher script — it backgrounds ffmpeg and prints PID
             result = subprocess.run(
-                ["pgrep", "-f", f"ffmpeg.*{outfile}"],
-                capture_output=True, text=True, timeout=3)
-            pid = result.stdout.strip().split("\n")[0] if result.stdout.strip() else ""
+                ["setsid", launcher],
+                capture_output=True, text=True, timeout=5,
+                start_new_session=True,
+            )
+            pid = result.stdout.strip()
 
-            if not pid:
-                # Fallback: find any ffmpeg recording to our output dir
+            # If we didn't get a PID from echo, try pgrep
+            if not pid or not pid.isdigit():
+                time.sleep(0.5)
                 result = subprocess.run(
                     ["pgrep", "-f", "ffmpeg.*rawvideo"],
                     capture_output=True, text=True, timeout=3)
                 pid = result.stdout.strip().split("\n")[0] if result.stdout.strip() else ""
 
-            if pid:
+            if pid and pid.isdigit():
                 with open(self._pid_file, "w") as f:
                     f.write(pid)
                 with open(self._file_file, "w") as f:
