@@ -219,27 +219,56 @@ esac
         self._rebuild_menu()
 
     def _view_config(self):
-        """Navigate to a text viewer showing the config file."""
+        """Open config.toml in the editor (editable with reset-to-default)."""
         config_path = os.path.join(self.install_dir, "config.toml")
         try:
             with open(config_path) as f:
                 content = f.read()
-            if "text_viewer" in self.app.pages:
-                self.app.pages["text_viewer"].set_content("config.toml", content)
-                self.app.navigate("text_viewer")
+
+            def save_config(text):
+                with open(config_path, "w") as f:
+                    f.write(text)
+
+            def reset_config():
+                import urllib.request
+                network = self._read_network()
+                if network == "unknown":
+                    network = "testnet"
+                url = f"https://raw.githubusercontent.com/nervosnetwork/ckb-light-client/develop/config/{network}.toml"
+                with urllib.request.urlopen(url, timeout=15) as resp:
+                    new_config = resp.read().decode()
+                with open(config_path, "w") as f:
+                    f.write(new_config)
+                return new_config
+
+            if "editor" in self.app.pages:
+                self.app.pages["editor"].open(
+                    title="config.toml",
+                    content=content,
+                    on_save=save_config,
+                    read_only=False,
+                    syntax="toml",
+                    reset_fn=reset_config,
+                )
+                self.app.navigate("editor")
         except Exception as e:
             self._set_message(f"Error: {e}", COLORS["red"])
 
     def _view_log(self):
-        """Navigate to text viewer showing last 20 lines of log."""
+        """Open log in editor (read-only, log syntax highlighting)."""
         log_path = os.path.join(self.install_dir, "data", "ckb-light.log")
         try:
             with open(log_path) as f:
                 lines = f.readlines()
-            content = "".join(lines[-20:])
-            if "text_viewer" in self.app.pages:
-                self.app.pages["text_viewer"].set_content("ckb-light.log (last 20)", content)
-                self.app.navigate("text_viewer")
+            content = "".join(lines[-50:])  # last 50 lines
+            if "editor" in self.app.pages:
+                self.app.pages["editor"].open(
+                    title="ckb-light.log",
+                    content=content,
+                    read_only=True,
+                    syntax="log",
+                )
+                self.app.navigate("editor")
         except Exception as e:
             self._set_message(f"Error: {e}", COLORS["red"])
 

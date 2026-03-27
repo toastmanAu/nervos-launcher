@@ -310,6 +310,11 @@ class TerminalPage(Page):
                     self.cmd_idx = (self.cmd_idx + 1) % len(cmds)
                 return True
 
+            # Select = edit terminal commands JSON
+            if btn == "select":
+                self._open_command_editor()
+                return True
+
         # Keyboard fallback
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
@@ -335,3 +340,44 @@ class TerminalPage(Page):
             return True
 
         return False
+
+    def _open_command_editor(self):
+        """Open terminal commands JSON in the editor."""
+        cmd_path = os.path.join(self.install_dir, COMMANDS_FILE)
+        try:
+            content = json.dumps(self.commands, indent=2)
+
+            def save_commands_from_editor(text):
+                try:
+                    new_cmds = json.loads(text)
+                    save_commands(self.install_dir, new_cmds)
+                    self.commands = new_cmds
+                    self.cat_names = list(self.commands.keys())
+                    self.cat_idx = 0
+                    self.cmd_idx = 0
+                    self._add_line("Commands updated from editor", COLORS["green"])
+                except json.JSONDecodeError as e:
+                    self._add_line(f"Invalid JSON: {e}", COLORS["red"])
+
+            def reset_commands_fn():
+                from screens.terminal import DEFAULT_COMMANDS
+                save_commands(self.install_dir, DEFAULT_COMMANDS)
+                self.commands = DEFAULT_COMMANDS
+                self.cat_names = list(self.commands.keys())
+                self.cat_idx = 0
+                self.cmd_idx = 0
+                self._add_line("Commands reset to defaults", COLORS["green"])
+                return json.dumps(DEFAULT_COMMANDS, indent=2)
+
+            if "editor" in self.app.pages:
+                self.app.pages["editor"].open(
+                    title="Terminal Commands",
+                    content=content,
+                    on_save=save_commands_from_editor,
+                    read_only=False,
+                    syntax="json",
+                    reset_fn=reset_commands_fn,
+                )
+                self.app.navigate("editor")
+        except Exception as e:
+            self._add_line(f"Error opening editor: {e}", COLORS["red"])
