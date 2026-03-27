@@ -211,8 +211,7 @@ class ScreenRecorder:
         with open(launcher, "w") as f:
             f.write(f"""#!/bin/sh
 {ff} -y \\
-  -f rawvideo -pixel_format {self._pixel_format} \\
-  -video_size {self.fb_width}x{self.fb_height} \\
+  -f fbdev \\
   -framerate {self.fps} \\
   -i {self.fb_device} \\
   -c:v {encoder} {enc_opts} \\
