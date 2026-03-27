@@ -17,6 +17,7 @@ class HomePage(Page):
         self.menu = ScrollList([
             {"text": "Explorer",  "subtext": "Block info, headers",  "action": "explorer"},
             {"text": "Peers",     "subtext": "Connected nodes",      "action": "peers"},
+            {"text": "Recorder",  "subtext": "Screen capture",       "action": "recorder"},
             {"text": "Settings",  "subtext": "Service, config",      "action": "settings"},
             {"text": "Terminal",  "subtext": "System shell",         "action": "terminal"},
         ], item_height=36, visible_area_top=220, visible_area_bottom=32)

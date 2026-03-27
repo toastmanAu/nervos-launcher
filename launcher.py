@@ -37,6 +37,7 @@ from screens.terminal import TerminalPage
 from screens.install_progress import InstallProgressPage
 from screens.button_map import ButtonMapPage, load_button_config
 from lib.editor import TextEditorPage
+from screens.recorder import RecorderPage
 
 
 def find_install_dir():
@@ -105,6 +106,7 @@ def main():
     app.register_page("settings",    SettingsPage(app, rpc, install_dir))
     app.register_page("terminal",    TerminalPage(app, install_dir))
     app.register_page("editor",      TextEditorPage(app))
+    app.register_page("recorder",   RecorderPage(app, install_dir))
     app.register_page("install_progress", InstallProgressPage(app))
     app.register_page("button_map", ButtonMapPage(app, install_dir,
                        on_complete=lambda m: app.go_home()))

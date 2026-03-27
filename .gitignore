@@ -1,4 +1,8 @@
 __pycache__/
 *.pyc
+*.pyo
 data/
 *.log
+packages/
+*.squashfs
+.DS_Store
