@@ -63,10 +63,8 @@ class ScreenRecorder:
 
     @property
     def ffmpeg_path(self):
-        """Cached ffmpeg path."""
-        if not hasattr(self, '_ffmpeg_path') or self._ffmpeg_path is None:
-            self._ffmpeg_path = self._find_ffmpeg()
-        return self._ffmpeg_path
+        """Find ffmpeg — refreshes each time in case user installed a new one."""
+        return self._find_ffmpeg()
 
     @property
     def ffmpeg_available(self):
