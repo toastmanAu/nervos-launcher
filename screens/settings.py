@@ -121,19 +121,26 @@ class SettingsPage(Page):
                 return "installed"
         return "not installed"
 
+    # Persistent service paths (survives reboot on overlay FS)
+    USERDATA_SERVICE = "/userdata/system/services/ckb_light"
+    USERDATA_CUSTOM = "/userdata/system/custom.sh"
+    SYSTEMD_SERVICE = "/etc/systemd/system/ckb-light.service"
+
     def _has_service(self):
-        """Check if an init script or cron entry exists for auto-start."""
-        # Check common locations
-        for path in ["/etc/init.d/S99ckb-light", "/etc/init.d/ckb-light"]:
-            if os.path.exists(path):
-                return True
-        # Check crontab
+        """Check if auto-start is configured (persistent across reboots)."""
+        # Knulli/Batocera: /userdata/system/services/
+        if os.path.exists(self.USERDATA_SERVICE):
+            return True
+        # Knulli/Batocera: custom.sh contains our entry
         try:
-            result = subprocess.run(["crontab", "-l"], capture_output=True, text=True, timeout=3)
-            if "ckb-light" in result.stdout:
-                return True
+            with open(self.USERDATA_CUSTOM) as f:
+                if "ckb-light" in f.read():
+                    return True
         except:
             pass
+        # Systemd (standard Linux)
+        if os.path.exists(self.SYSTEMD_SERVICE):
+            return True
         return False
 
     def _read_network(self):
@@ -185,18 +192,23 @@ class SettingsPage(Page):
         self._rebuild_menu()
 
     def _toggle_boot(self):
-        """Create or remove an init.d script for auto-start on Knulli/Buildroot."""
-        init_script = "/etc/init.d/S99ckb-light"
+        """Toggle auto-start. Uses persistent path that survives overlay FS reboots."""
         if self._has_service():
-            try:
-                os.remove(init_script)
-                self._set_message("Boot service disabled", COLORS["yellow"])
-            except Exception as e:
-                self._set_message(f"Error: {e}", COLORS["red"])
+            self._disable_service()
         else:
-            try:
+            self._enable_service()
+        self._rebuild_menu()
+
+    def _enable_service(self):
+        """Enable auto-start using the best available method."""
+        try:
+            # Method 1: Knulli/Batocera userdata services (preferred, persistent)
+            if os.path.exists("/userdata/system") or os.path.exists("/userdata"):
+                svc_dir = "/userdata/system/services"
+                os.makedirs(svc_dir, exist_ok=True)
+
                 script = f"""#!/bin/sh
-# CKB Light Client auto-start
+# CKB Light Client auto-start (Nervos Launcher)
 case "$1" in
   start)
     {self.install_dir}/start.sh
@@ -204,19 +216,101 @@ case "$1" in
   stop)
     {self.install_dir}/stop.sh
     ;;
-  *)
-    echo "Usage: $0 {{start|stop}}"
-    exit 1
-    ;;
 esac
 """
-                with open(init_script, "w") as f:
+                with open(self.USERDATA_SERVICE, "w") as f:
                     f.write(script)
-                os.chmod(init_script, 0o755)
-                self._set_message("Boot service enabled", COLORS["green"])
-            except Exception as e:
-                self._set_message(f"Error: {e}", COLORS["red"])
-        self._rebuild_menu()
+                os.chmod(self.USERDATA_SERVICE, 0o755)
+
+                # Enable via batocera-settings if available
+                try:
+                    subprocess.run(
+                        ["batocera-settings-set", "system.services", "ckb_light"],
+                        capture_output=True, timeout=5)
+                except:
+                    # Fallback: also add to custom.sh for older Knulli
+                    custom = self.USERDATA_CUSTOM
+                    existing = ""
+                    try:
+                        with open(custom) as f:
+                            existing = f.read()
+                    except:
+                        pass
+                    if "ckb-light" not in existing:
+                        with open(custom, "a") as f:
+                            f.write(f"\n# CKB Light Client auto-start\n{self.install_dir}/start.sh &\n")
+
+                self._set_message("Boot service enabled (persistent)", COLORS["green"])
+                return
+
+            # Method 2: Systemd (standard Linux)
+            if os.path.exists("/etc/systemd/system"):
+                unit = f"""[Unit]
+Description=CKB Light Client
+After=network.target
+
+[Service]
+Type=forking
+ExecStart={self.install_dir}/start.sh
+ExecStop={self.install_dir}/stop.sh
+WorkingDirectory={self.install_dir}
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+"""
+                with open(self.SYSTEMD_SERVICE, "w") as f:
+                    f.write(unit)
+                subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=5)
+                subprocess.run(["systemctl", "enable", "ckb-light"], capture_output=True, timeout=5)
+                self._set_message("Systemd service enabled", COLORS["green"])
+                return
+
+        except Exception as e:
+            self._set_message(f"Error: {e}", COLORS["red"])
+
+    def _disable_service(self):
+        """Disable auto-start."""
+        try:
+            # Remove userdata service
+            if os.path.exists(self.USERDATA_SERVICE):
+                os.remove(self.USERDATA_SERVICE)
+
+            # Remove from custom.sh
+            try:
+                with open(self.USERDATA_CUSTOM) as f:
+                    lines = f.readlines()
+                with open(self.USERDATA_CUSTOM, "w") as f:
+                    skip_next = False
+                    for line in lines:
+                        if "CKB Light Client" in line or "ckb-light" in line:
+                            skip_next = True
+                            continue
+                        if skip_next and line.strip().endswith("&"):
+                            skip_next = False
+                            continue
+                        skip_next = False
+                        f.write(line)
+            except:
+                pass
+
+            # Disable systemd
+            if os.path.exists(self.SYSTEMD_SERVICE):
+                subprocess.run(["systemctl", "disable", "ckb-light"], capture_output=True, timeout=5)
+                os.remove(self.SYSTEMD_SERVICE)
+                subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=5)
+
+            # Try batocera-settings
+            try:
+                subprocess.run(["batocera-settings-set", "system.services", ""],
+                               capture_output=True, timeout=5)
+            except:
+                pass
+
+            self._set_message("Boot service disabled", COLORS["yellow"])
+        except Exception as e:
+            self._set_message(f"Error: {e}", COLORS["red"])
 
     def _view_config(self):
         """Open config.toml in the editor (editable with reset-to-default)."""
