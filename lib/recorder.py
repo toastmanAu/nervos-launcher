@@ -33,7 +33,7 @@ class ScreenRecorder:
         self.output_dir = output_dir
         self.fps = 30
         self.quality = "medium"  # "low", "medium", "high"
-        self.record_audio = True  # capture system audio via PulseAudio monitor
+        self.record_audio = False  # requires static ffmpeg with --enable-libpulse
 
         # State file — persists across app restarts
         self._pid_file = os.path.join(output_dir, ".rec.pid")
@@ -116,7 +116,17 @@ class ScreenRecorder:
 
     @property
     def audio_available(self):
-        return self.audio_source is not None
+        """Audio needs both a PulseAudio source AND ffmpeg with pulse support."""
+        if not self.audio_source:
+            return False
+        ff = self.ffmpeg_path
+        if not ff:
+            return False
+        try:
+            result = subprocess.run([ff, "-formats"], capture_output=True, text=True, timeout=3)
+            return "pulse" in result.stdout
+        except:
+            return False
 
     def _detect_framebuffer(self):
         """Read framebuffer dimensions from sysfs."""
