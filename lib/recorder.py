@@ -96,8 +96,8 @@ class ScreenRecorder:
                 dims = f.read().strip().split(",")
                 self.fb_width = int(dims[0])
                 raw_height = int(dims[1])
-                # Some devices report double height for double buffering
-                if raw_height > self.fb_width * 2:
+                # Detect double buffering — if height > width, likely doubled
+                if raw_height > self.fb_width:
                     self.fb_height = raw_height // 2
                 else:
                     self.fb_height = raw_height
@@ -168,30 +168,28 @@ class ScreenRecorder:
                 pass
 
     def _detect_encoder(self):
-        """Find the best available h264 encoder."""
+        """Find the best available h264 encoder by actually testing them."""
         ff = self.ffmpeg_path
         if not ff:
             return "mpeg4", "-b:v 3M"
+
+        bitrates = {"low": "1M", "medium": "3M", "high": "6M"}
+        br = bitrates.get(self.quality, "3M")
+
+        # Check what's compiled in
         try:
-            result = subprocess.run(
-                [ff, "-codecs"], capture_output=True, text=True, timeout=5)
-            codecs = result.stdout + result.stderr
-            # Prefer libx264, fall back to v4l2m2m, then mpeg4
-            if "libx264" in codecs and "--enable-libx264" in codecs:
-                return "libx264", f"-preset {self._preset} -crf {self._crf}"
-            elif "h264_v4l2m2m" in codecs:
-                # Hardware encoder — no preset/crf, use bitrate
-                bitrates = {"low": "1M", "medium": "3M", "high": "6M"}
-                br = bitrates.get(self.quality, "3M")
-                return "h264_v4l2m2m", f"-b:v {br}"
-            elif "mpeg4" in codecs:
-                bitrates = {"low": "1M", "medium": "3M", "high": "6M"}
-                br = bitrates.get(self.quality, "3M")
-                return "mpeg4", f"-b:v {br}"
+            result = subprocess.run([ff, "-codecs"], capture_output=True, text=True, timeout=5)
+            config = result.stdout + result.stderr
         except:
-            pass
-        # Last resort
-        return "mpeg4", "-b:v 3M"
+            config = ""
+
+        # Option 1: libx264 (best quality, needs --enable-libx264)
+        if "--enable-libx264" in config:
+            return "libx264", f"-preset {self._preset} -crf {self._crf}"
+
+        # Option 2: mpeg4 (software, always works, decent quality)
+        # Skip h264_v4l2m2m — requires specific V4L2 hardware that most handhelds lack
+        return "mpeg4", f"-b:v {br}"
 
     def start(self):
         """Start recording. ffmpeg runs fully detached — survives app exit."""
