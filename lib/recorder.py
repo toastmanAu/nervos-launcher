@@ -224,23 +224,33 @@ echo $!
         os.chmod(launcher, 0o755)
 
         try:
-            # Run the launcher script — it backgrounds ffmpeg and prints PID
-            result = subprocess.run(
-                ["setsid", launcher],
-                capture_output=True, text=True, timeout=5,
-                start_new_session=True,
-            )
-            pid = result.stdout.strip()
+            # Fire and forget — os.system returns immediately since script backgrounds
+            os.system(f"{launcher} > /tmp/.rec_pid 2>/dev/null")
+            time.sleep(1)
 
-            # If we didn't get a PID from echo, try pgrep
+            # Read PID from the script's echo output
+            pid = ""
+            try:
+                with open("/tmp/.rec_pid") as f:
+                    pid = f.read().strip().split("\n")[-1]
+            except:
+                pass
+
+            # Fallback: pgrep
             if not pid or not pid.isdigit():
-                time.sleep(0.5)
                 result = subprocess.run(
                     ["pgrep", "-f", "ffmpeg.*rawvideo"],
                     capture_output=True, text=True, timeout=3)
-                pid = result.stdout.strip().split("\n")[0] if result.stdout.strip() else ""
+                pids = result.stdout.strip().split("\n")
+                pid = pids[-1] if pids and pids[-1] else ""
 
             if pid and pid.isdigit():
+                # Verify it's actually running
+                try:
+                    os.kill(int(pid), 0)
+                except OSError:
+                    return False
+
                 with open(self._pid_file, "w") as f:
                     f.write(pid)
                 with open(self._file_file, "w") as f:
