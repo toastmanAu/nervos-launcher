@@ -280,7 +280,7 @@ class RecorderPage(Page):
                     self._rebuild_menu()
 
                 elif action == "cycle_fps":
-                    fps_opts = [15, 24, 30, 60]
+                    fps_opts = [15, 24, 30]
                     idx = fps_opts.index(self.recorder.fps) if self.recorder.fps in fps_opts else 2
                     self.recorder.fps = fps_opts[(idx + 1) % len(fps_opts)]
                     self._rebuild_menu()
