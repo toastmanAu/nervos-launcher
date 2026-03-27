@@ -33,6 +33,7 @@ class ScreenRecorder:
         self.output_dir = output_dir
         self.fps = 30
         self.quality = "medium"  # "low", "medium", "high"
+        self.record_audio = True  # capture system audio via PulseAudio monitor
 
         # State file — persists across app restarts
         self._pid_file = os.path.join(output_dir, ".rec.pid")
@@ -88,6 +89,34 @@ class ScreenRecorder:
         source = "installed" if is_ours else "system"
         codec = "h264 (libx264)" if has_x264 else "mpeg4 (fallback)"
         return f"{source} — {codec}"
+
+    def _detect_audio_source(self):
+        """Find PulseAudio/PipeWire monitor source for system audio capture."""
+        try:
+            result = subprocess.run(
+                ["pactl", "list", "short", "sources"],
+                capture_output=True, text=True, timeout=3)
+            for line in result.stdout.strip().split("\n"):
+                if "monitor" in line and "RUNNING" in line:
+                    return line.split("\t")[1]
+            # Fallback: any monitor source
+            for line in result.stdout.strip().split("\n"):
+                if "monitor" in line:
+                    return line.split("\t")[1]
+        except:
+            pass
+        return None
+
+    @property
+    def audio_source(self):
+        """Cached audio source."""
+        if not hasattr(self, '_audio_source'):
+            self._audio_source = self._detect_audio_source()
+        return self._audio_source
+
+    @property
+    def audio_available(self):
+        return self.audio_source is not None
 
     def _detect_framebuffer(self):
         """Read framebuffer dimensions from sysfs."""
@@ -206,6 +235,13 @@ class ScreenRecorder:
 
         encoder, enc_opts = self._detect_encoder()
 
+        # Build audio input args if available and enabled
+        audio_args = ""
+        audio_enc = ""
+        if self.record_audio and self.audio_source:
+            audio_args = f'-f pulse -i "{self.audio_source}"'
+            audio_enc = "-c:a aac -b:a 128k"
+
         # Write a launcher script — most reliable way to detach on all systems
         launcher = os.path.join(self.output_dir, ".rec_launch.sh")
         with open(launcher, "w") as f:
@@ -214,8 +250,10 @@ class ScreenRecorder:
   -f fbdev \\
   -framerate {self.fps} \\
   -i {self.fb_device} \\
+  {audio_args} \\
   -c:v {encoder} {enc_opts} \\
   -pix_fmt yuv420p \\
+  {audio_enc} \\
   "{outfile}" \\
   > /dev/null 2>&1 &
 echo $!

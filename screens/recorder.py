@@ -87,6 +87,22 @@ class RecorderPage(Page):
             "subcolor": COLORS["accent"],
             "action": "cycle_fps",
         })
+        # Audio toggle
+        if self.recorder.audio_available:
+            items.append({
+                "text": "Audio",
+                "subtext": "ON" if self.recorder.record_audio else "OFF",
+                "subcolor": COLORS["green"] if self.recorder.record_audio else COLORS["red"],
+                "action": "toggle_audio",
+            })
+        else:
+            items.append({
+                "text": "Audio",
+                "subtext": "not available",
+                "subcolor": COLORS["muted"],
+                "action": None,
+            })
+
         items.append({
             "text": "Resolution",
             "subtext": f"{self.recorder.fb_width}x{self.recorder.fb_height}",
@@ -256,6 +272,10 @@ class RecorderPage(Page):
                     qualities = ["low", "medium", "high"]
                     idx = qualities.index(self.recorder.quality) if self.recorder.quality in qualities else 0
                     self.recorder.quality = qualities[(idx + 1) % len(qualities)]
+                    self._rebuild_menu()
+
+                elif action == "toggle_audio":
+                    self.recorder.record_audio = not self.recorder.record_audio
                     self._rebuild_menu()
 
                 elif action == "cycle_fps":
