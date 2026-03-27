@@ -51,15 +51,14 @@ DEFAULT_COMMANDS = {
         ["SSH Status", "pgrep sshd && echo 'SSH running' || echo 'SSH not running'"],
     ],
     "Install": [
-        ["apt update", "apt-get update 2>&1 | tail -5"],
         ["List Available", "python3 -c \"import sys;sys.path.insert(0,'/userdata/ckb-light-client/nervos-launcher');from lib.packages import PackageManager;pm=PackageManager();pm.refresh();[print(f'{p[chr(110)+chr(97)+chr(109)+chr(101)]:20s} {p.get(chr(118)+chr(101)+chr(114)+chr(115)+chr(105)+chr(111)+chr(110),chr(63)):10s} {chr(9989) if p.get(chr(105)+chr(115)+chr(95)+chr(105)+chr(110)+chr(115)+chr(116)+chr(97)+chr(108)+chr(108)+chr(101)+chr(100)) else chr(11036)}  {p.get(chr(100)+chr(101)+chr(115)+chr(99)+chr(114)+chr(105)+chr(112)+chr(116)+chr(105)+chr(111)+chr(110),chr(45))}') for p in pm.list_available()]\""],
         ["Install jq", "python3 -c \"import sys;sys.path.insert(0,'/userdata/ckb-light-client/nervos-launcher');from lib.packages import PackageManager;from lib.installer import ProgressLog;p=ProgressLog();pm=PackageManager(progress=p);pm.install('jq');[print(l[0]) for l in p.get_lines()]\""],
         ["Install micro", "python3 -c \"import sys;sys.path.insert(0,'/userdata/ckb-light-client/nervos-launcher');from lib.packages import PackageManager;from lib.installer import ProgressLog;p=ProgressLog();pm=PackageManager(progress=p);pm.install('micro');[print(l[0]) for l in p.get_lines()]\""],
         ["Install yq", "python3 -c \"import sys;sys.path.insert(0,'/userdata/ckb-light-client/nervos-launcher');from lib.packages import PackageManager;from lib.installer import ProgressLog;p=ProgressLog();pm=PackageManager(progress=p);pm.install('yq');[print(l[0]) for l in p.get_lines()]\""],
         ["Installed Pkgs", "cat /userdata/ckb-light-client/packages/installed.json 2>/dev/null | python3 -m json.tool || echo 'No packages installed'"],
-        ["Python pkgs", "python3 -m pip list 2>/dev/null | head -20 || echo 'pip not available'"],
-        ["Disk usage", "du -sh /userdata/* 2>/dev/null | sort -h"],
         ["Package bin dir", "ls -lh /userdata/ckb-light-client/packages/bin/ 2>/dev/null || echo 'No packages installed'"],
+        ["Disk Free", "df -h /userdata"],
+        ["Disk Usage (quick)", "du -sh /userdata/ckb-light-client/ 2>/dev/null; du -sh /userdata/roms/ 2>/dev/null; du -sh /userdata/saves/ 2>/dev/null"],
     ],
 }
 
