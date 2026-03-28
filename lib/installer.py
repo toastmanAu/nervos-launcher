@@ -130,11 +130,16 @@ class LightClientInstaller:
             tarball = "/tmp/ckb-light-install.tar.gz"
             self._download_with_progress(download_url, tarball)
 
-            # Extract
+            # Extract — use gunzip pipe for BusyBox tar (no -z flag)
             p.step("Extracting binary")
             result = subprocess.run(
-                f"cd /tmp && tar -xzf ckb-light-install.tar.gz",
-                shell=True, capture_output=True, text=True, timeout=30)
+                f"cd /tmp && gunzip -c ckb-light-install.tar.gz | tar -xf -",
+                shell=True, capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                # Fallback: try tar -xzf in case it's GNU tar
+                result = subprocess.run(
+                    f"cd /tmp && tar -xzf ckb-light-install.tar.gz",
+                    shell=True, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
                 p.error(f"Extract failed: {result.stderr[:80]}")
                 p.finish(False)
