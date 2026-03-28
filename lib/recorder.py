@@ -104,20 +104,9 @@ class ScreenRecorder:
         except Exception:
             pass
 
-        # Try ALSA — check for capture hardware
-        try:
-            result = subprocess.run(
-                ["arecord", "-l"],
-                capture_output=True, text=True, timeout=3)
-            if "card" in result.stdout:
-                # Parse first capture card/device: "card 0: ... device 0: ..."
-                import re
-                match = re.search(r'card (\d+):.*device (\d+):', result.stdout)
-                if match:
-                    alsa_dev = f"hw:{match.group(1)},{match.group(2)}"
-                else:
-                    alsa_dev = "hw:0,0"
-                return ("alsa", alsa_dev)
+        # ALSA hw capture is mic-only (no system audio loopback) — skip it.
+        # System audio recording requires PulseAudio/PipeWire monitor source.
+        # Users can install PulseAudio via Terminal if they want audio capture.
         except Exception:
             pass
 
