@@ -110,8 +110,14 @@ class ScreenRecorder:
                 ["arecord", "-l"],
                 capture_output=True, text=True, timeout=3)
             if "card" in result.stdout:
-                # Use default ALSA capture device
-                return ("alsa", "default")
+                # Parse first capture card/device: "card 0: ... device 0: ..."
+                import re
+                match = re.search(r'card (\d+):.*device (\d+):', result.stdout)
+                if match:
+                    alsa_dev = f"hw:{match.group(1)},{match.group(2)}"
+                else:
+                    alsa_dev = "hw:0,0"
+                return ("alsa", alsa_dev)
         except Exception:
             pass
 
