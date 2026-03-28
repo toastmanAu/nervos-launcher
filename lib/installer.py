@@ -65,6 +65,7 @@ class LightClientInstaller:
     """Downloads and installs/updates the CKB light client with live progress."""
 
     REPO = "nervosnetwork/ckb-light-client"
+    FALLBACK_REPO = "toastmanAu/nervos-launcher"
     CONFIG_URL = "https://raw.githubusercontent.com/nervosnetwork/ckb-light-client/develop/config"
 
     def __init__(self, install_dir="/userdata/ckb-light-client", progress=None):
@@ -156,6 +157,21 @@ class LightClientInstaller:
                 return
             p.ok("Binary extracted")
 
+            # Test if binary runs (catches GLIBC mismatch)
+            p.step("Testing binary compatibility")
+            test_result = subprocess.run(
+                [bin_path, "--version"],
+                capture_output=True, text=True, timeout=5)
+            if test_result.returncode != 0 or "GLIBC" in test_result.stderr:
+                p.warn("Official binary incompatible (GLIBC too old)")
+                p.step("Downloading static (musl) build as fallback")
+                bin_path = self._download_musl_fallback(target)
+                if not bin_path:
+                    p.error("No compatible binary available")
+                    p.finish(False)
+                    return
+                p.ok("Static build ready")
+
             # Stop if running
             was_running = self._is_running()
             if was_running:
@@ -217,6 +233,56 @@ class LightClientInstaller:
         except Exception as e:
             p.error(f"Failed: {e}")
             p.finish(False)
+
+    def _download_musl_fallback(self, target):
+        """Download statically linked musl build from our repo as GLIBC fallback."""
+        p = self.progress
+        try:
+            releases = self._fetch_json(
+                f"https://api.github.com/repos/{self.FALLBACK_REPO}/releases?per_page=5"
+            )
+            if not releases:
+                p.error("Failed to fetch fallback releases")
+                return None
+
+            download_url = None
+            for rel in releases:
+                for asset in rel.get("assets", []):
+                    name = asset.get("name", "")
+                    if "musl" in name and "aarch64" in name and name.endswith(".tar.gz"):
+                        download_url = asset["browser_download_url"]
+                        break
+                if download_url:
+                    break
+
+            if not download_url:
+                p.error("No musl fallback binary available")
+                return None
+
+            tarball = "/tmp/ckb-light-musl.tar.gz"
+            self._download_with_progress(download_url, tarball)
+
+            # Extract
+            result = subprocess.run(
+                f"cd /tmp && gunzip -c ckb-light-musl.tar.gz | tar -xf -",
+                shell=True, capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                result = subprocess.run(
+                    f"cd /tmp && tar -xzf ckb-light-musl.tar.gz",
+                    shell=True, capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                return None
+
+            result = subprocess.run(
+                "find /tmp -name 'ckb-light-client' -type f | head -1",
+                shell=True, capture_output=True, text=True, timeout=10)
+            bin_path = result.stdout.strip()
+            if bin_path and os.path.isfile(bin_path):
+                return bin_path
+            return None
+        except Exception as e:
+            p.error(f"Fallback download failed: {e}")
+            return None
 
     def _fetch_json(self, url):
         try:
