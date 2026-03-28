@@ -89,41 +89,54 @@ class ScreenRecorder:
         return f"{source} — {codec}"
 
     def _detect_audio_source(self):
-        """Find PulseAudio/PipeWire monitor source for system audio capture."""
+        """Find audio capture source. Tries PulseAudio first, then ALSA."""
+        # Try PulseAudio/PipeWire
         try:
             result = subprocess.run(
                 ["pactl", "list", "short", "sources"],
                 capture_output=True, text=True, timeout=3)
             for line in result.stdout.strip().split("\n"):
                 if "monitor" in line and "RUNNING" in line:
-                    return line.split("\t")[1]
-            # Fallback: any monitor source
+                    return ("pulse", line.split("\t")[1])
             for line in result.stdout.strip().split("\n"):
                 if "monitor" in line:
-                    return line.split("\t")[1]
-        except:
+                    return ("pulse", line.split("\t")[1])
+        except Exception:
             pass
-        return None
+
+        # Try ALSA — check for capture hardware
+        try:
+            result = subprocess.run(
+                ["arecord", "-l"],
+                capture_output=True, text=True, timeout=3)
+            if "card" in result.stdout:
+                # Use default ALSA capture device
+                return ("alsa", "default")
+        except Exception:
+            pass
+
+        return (None, None)
 
     @property
     def audio_source(self):
-        """Cached audio source."""
+        """Cached audio source — returns (format, device) tuple."""
         if not hasattr(self, '_audio_source'):
             self._audio_source = self._detect_audio_source()
         return self._audio_source
 
     @property
     def audio_available(self):
-        """Audio needs both a PulseAudio source AND ffmpeg with pulse support."""
-        if not self.audio_source:
+        """Audio needs a capture source AND matching ffmpeg support."""
+        fmt, device = self.audio_source
+        if not fmt:
             return False
         ff = self.ffmpeg_path
         if not ff:
             return False
         try:
             result = subprocess.run([ff, "-formats"], capture_output=True, text=True, timeout=3)
-            return "pulse" in result.stdout
-        except:
+            return fmt in result.stdout
+        except Exception:
             return False
 
     def _detect_framebuffer(self):
@@ -277,11 +290,12 @@ class ScreenRecorder:
         encoder, enc_opts = self._detect_encoder()
         capture_method, capture_device, rotate_filter = self._detect_capture_method()
 
-        # Build audio input args — only if ffmpeg actually supports pulse
+        # Build audio input args
         audio_args = ""
         audio_enc = ""
         if self.record_audio and self.audio_available:
-            audio_args = f'-f pulse -i "{self.audio_source}"'
+            fmt, device = self.audio_source
+            audio_args = f'-f {fmt} -i "{device}"'
             audio_enc = "-c:a aac -b:a 128k"
 
         # Build input args based on capture method
