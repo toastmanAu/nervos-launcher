@@ -240,6 +240,27 @@ class ScreenRecorder:
         # Skip h264_v4l2m2m — requires specific V4L2 hardware that most handhelds lack
         return "mpeg4", f"-b:v {br}"
 
+    def _detect_capture_method(self):
+        """Detect best screen capture: kmsgrab (live DRM) > fbdev (framebuffer)."""
+        ff = self.ffmpeg_path
+        if not ff:
+            return "fbdev", self.fb_device, ""
+
+        # Check if kmsgrab is available and DRM device exists
+        if os.path.exists("/dev/dri/card0"):
+            try:
+                result = subprocess.run([ff, "-devices"], capture_output=True, text=True, timeout=3)
+                if "kmsgrab" in result.stdout:
+                    # kmsgrab captures raw portrait buffer — rotate if needed
+                    rotate = ""
+                    if self.fb_width < self.fb_height:
+                        rotate = "transpose=1,"  # portrait → landscape
+                    return "kmsgrab", "/dev/dri/card0", rotate
+            except Exception:
+                pass
+
+        return "fbdev", self.fb_device, ""
+
     def start(self):
         """Start recording. ffmpeg runs fully detached — survives app exit."""
         if self.recording:
@@ -254,6 +275,7 @@ class ScreenRecorder:
         outfile = os.path.join(self.output_dir, f"rec_{timestamp}.mp4")
 
         encoder, enc_opts = self._detect_encoder()
+        capture_method, capture_device, rotate_filter = self._detect_capture_method()
 
         # Build audio input args — only if ffmpeg actually supports pulse
         audio_args = ""
@@ -262,17 +284,23 @@ class ScreenRecorder:
             audio_args = f'-f pulse -i "{self.audio_source}"'
             audio_enc = "-c:a aac -b:a 128k"
 
+        # Build input args based on capture method
+        if capture_method == "kmsgrab":
+            input_args = f"-f kmsgrab -device {capture_device} -framerate {self.fps} -i -"
+            vf = f"-vf 'hwdownload,format=bgr0,{rotate_filter}format=yuv420p'"
+        else:
+            input_args = f"-f fbdev -framerate {self.fps} -i {capture_device}"
+            vf = "-pix_fmt yuv420p"
+
         # Write a launcher script — most reliable way to detach on all systems
         launcher = os.path.join(self.output_dir, ".rec_launch.sh")
         with open(launcher, "w") as f:
             f.write(f"""#!/bin/sh
 {ff} -y \\
-  -f fbdev \\
-  -framerate {self.fps} \\
-  -i {self.fb_device} \\
+  {input_args} \\
   {audio_args} \\
+  {vf} \\
   -c:v {encoder} {enc_opts} \\
-  -pix_fmt yuv420p \\
   {audio_enc} \\
   "{outfile}" \\
   > /dev/null 2>&1 &
@@ -357,25 +385,41 @@ echo $!
         return None
 
     def screenshot(self, filename=None):
-        """Capture a single frame from the framebuffer."""
+        """Capture a single frame from the display."""
         os.makedirs(self.output_dir, exist_ok=True)
 
         if not filename:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = os.path.join(self.output_dir, f"shot_{timestamp}.png")
 
-        # Try fbgrab first
+        ff = self.ffmpeg_path or "ffmpeg"
+        capture_method, capture_device, rotate_filter = self._detect_capture_method()
+
+        # Method 1: kmsgrab (live display, correct orientation)
+        if capture_method == "kmsgrab":
+            try:
+                vf = f"hwdownload,format=bgr0,{rotate_filter}format=rgb24"
+                subprocess.run([
+                    ff, "-y", "-f", "kmsgrab", "-device", capture_device,
+                    "-i", "-", "-vf", vf, "-frames:v", "1", filename,
+                ], capture_output=True, timeout=5)
+                if os.path.exists(filename) and os.path.getsize(filename) > 100:
+                    return filename
+            except Exception:
+                pass
+
+        # Method 2: fbgrab
         try:
             result = subprocess.run(["fbgrab", "-d", self.fb_device, filename], capture_output=True, timeout=5)
             if result.returncode == 0 and os.path.exists(filename):
                 return filename
-        except:
+        except Exception:
             pass
 
-        # Fallback: ffmpeg single frame
+        # Method 3: ffmpeg rawvideo from fbdev
         try:
             subprocess.run([
-                "ffmpeg", "-y",
+                ff, "-y",
                 "-f", "rawvideo", "-pixel_format", self._pixel_format,
                 "-video_size", f"{self.fb_width}x{self.fb_height}",
                 "-framerate", "1", "-i", self.fb_device,
@@ -383,7 +427,7 @@ echo $!
             ], capture_output=True, timeout=5)
             if os.path.exists(filename):
                 return filename
-        except:
+        except Exception:
             pass
 
         return None
