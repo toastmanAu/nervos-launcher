@@ -84,14 +84,39 @@ if [ ! -f "$LAUNCHER_DIR/launcher.py" ]; then
   echo "Nervos Launcher installed."
 fi
 
+# ── Stop frontend (EmulationStation / MainUI) ──────────────
+# Ports need exclusive framebuffer access
+ES_PID=$(pidof emulationstation 2>/dev/null)
+MAINUI_PID=$(pidof MainUI 2>/dev/null)
+
+if [ -n "$ES_PID" ]; then
+  echo "Stopping EmulationStation..."
+  kill "$ES_PID" 2>/dev/null
+  sleep 2
+fi
+if [ -n "$MAINUI_PID" ]; then
+  echo "Stopping MainUI..."
+  kill "$MAINUI_PID" 2>/dev/null
+  sleep 2
+fi
+
 # ── Launch ──────────────────────────────────────────────────
 cd "$INSTALL_DIR"
 python3 "$LAUNCHER_DIR/launcher.py"
+EXIT_CODE=$?
 
-if [ $? -ne 0 ]; then
+# ── Restart frontend ────────────────────────────────────────
+if [ -n "$ES_PID" ]; then
+  echo "Restarting EmulationStation..."
+  /usr/bin/emulationstation --no-splash &
+elif [ -n "$MAINUI_PID" ]; then
+  echo "Restarting MainUI..."
+  /usr/bin/MainUI &
+fi
+
+if [ $EXIT_CODE -ne 0 ]; then
   echo ""
-  echo "Nervos Launcher exited with an error."
+  echo "Nervos Launcher exited with an error (code $EXIT_CODE)."
   echo "Check: python3 -c 'import pygame; print(pygame.ver)'"
-  echo "Press any key..."
-  read -n 1
+  sleep 5
 fi

@@ -4,6 +4,7 @@ Provides theme, text rendering, menus, scrollable lists, and page management.
 Designed for 640x480 handheld displays with gamepad input.
 """
 
+import os
 import pygame
 
 # ── Theme ────────────────────────────────────────────────────
@@ -209,14 +210,30 @@ class App:
     """Main application — manages pages, input, and the game loop."""
 
     def __init__(self, width=640, height=480, fps=30):
+        # Auto-detect SDL video driver for framebuffer devices
+        if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+            for drv in ("kmsdrm", "fbcon", "directfb"):
+                os.environ["SDL_VIDEODRIVER"] = drv
+                pygame.display.init()
+                if pygame.display.get_init():
+                    break
+                pygame.display.quit()
+            else:
+                os.environ.pop("SDL_VIDEODRIVER", None)
+
         pygame.init()
-        pygame.mouse.set_visible(False)
 
         # Try fullscreen on framebuffer, fall back to windowed
         try:
             self.screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN)
-        except:
+        except Exception:
             self.screen = pygame.display.set_mode((width, height))
+
+        # Hide cursor after display is initialised
+        try:
+            pygame.mouse.set_visible(False)
+        except Exception:
+            pass
 
         pygame.display.set_caption("Nervos Launcher")
         self.clock = pygame.time.Clock()

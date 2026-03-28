@@ -132,15 +132,27 @@ class ScreenRecorder:
             with open("/sys/class/graphics/fb0/virtual_size") as f:
                 dims = f.read().strip().split(",")
                 self.fb_width = int(dims[0])
-                raw_height = int(dims[1])
-                # Detect double buffering — if height > width, likely doubled
-                if raw_height > self.fb_width:
-                    self.fb_height = raw_height // 2
-                else:
-                    self.fb_height = raw_height
+                self.fb_height = int(dims[1])
+
+            # Check for double buffering via fbset geometry if available
+            try:
+                result = subprocess.run(["fbset"], capture_output=True, text=True, timeout=3)
+                for line in result.stdout.split("\n"):
+                    if "geometry" in line:
+                        parts = line.strip().split()
+                        # geometry <xres> <yres> <vxres> <vyres> <depth>
+                        if len(parts) >= 5:
+                            xres, yres = int(parts[1]), int(parts[2])
+                            vxres, vyres = int(parts[3]), int(parts[4])
+                            self.fb_width = vxres
+                            self.fb_height = vyres
+                        break
+            except Exception:
+                pass
+
             with open("/sys/class/graphics/fb0/bits_per_pixel") as f:
                 self.fb_bpp = int(f.read().strip())
-        except:
+        except Exception:
             pass
 
     @property
