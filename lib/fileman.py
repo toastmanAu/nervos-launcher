@@ -22,7 +22,7 @@ Usage:
 
 import pygame
 import os
-from lib.ui import Page, ScrollList, COLORS, draw_text, draw_status_bar, draw_nav_bar, draw_box, get_font
+from lib.ui import Page, ScrollList, COLORS, draw_text, draw_status_bar, draw_nav_bar, draw_box, get_font, icon
 
 
 class FileManagerPage(Page):
@@ -68,7 +68,7 @@ class FileManagerPage(Page):
         # Parent directory (unless at root)
         if self.current_path != "/":
             items.append({
-                "text": "[D] ..",
+                "text": f"{icon(chr(0x1F4C1), '[D]')} ..",
                 "subtext": "parent",
                 "color": COLORS["accent"],
                 "action": "parent",
@@ -123,7 +123,7 @@ class FileManagerPage(Page):
             except:
                 sub = ""
             items.append({
-                "text": f"[D] {d}",
+                "text": f"{icon(chr(0x1F4C1), '[D]')} {d}",
                 "subtext": sub,
                 "color": COLORS["accent"],
                 "action": "enter",
@@ -164,13 +164,18 @@ class FileManagerPage(Page):
 
     def _file_icon(self, ext):
         icons = {
-            ".mp4": "[V]", ".avi": "[V]", ".mkv": "[V]", ".webm": "[V]",
-            ".png": "[I]", ".jpg": "[I]", ".jpeg": "[I]", ".bmp": "[I]",
-            ".py": "[P]", ".sh": "[S]", ".json": "[J]", ".toml": "[C]",
-            ".txt": "[T]", ".md": "[T]", ".log": "[L]",
-            ".zip": "[Z]", ".tar": "[Z]", ".gz": "[Z]",
+            ".mp4":  icon("\U0001F3AC", "[V]"), ".avi": icon("\U0001F3AC", "[V]"),
+            ".mkv":  icon("\U0001F3AC", "[V]"), ".webm": icon("\U0001F3AC", "[V]"),
+            ".png":  icon("\U0001F4F7", "[I]"), ".jpg": icon("\U0001F4F7", "[I]"),
+            ".jpeg": icon("\U0001F4F7", "[I]"), ".bmp": icon("\U0001F4F7", "[I]"),
+            ".py":   icon("\U0001F40D", "[P]"), ".sh":  icon("\u26A1", "[S]"),
+            ".json": icon("\U0001F4CB", "[J]"), ".toml": icon("\u2699\uFE0F", "[C]"),
+            ".txt":  icon("\U0001F4C4", "[T]"), ".md":  icon("\U0001F4C4", "[T]"),
+            ".log":  icon("\U0001F4C4", "[L]"),
+            ".zip":  icon("\U0001F4E6", "[Z]"), ".tar": icon("\U0001F4E6", "[Z]"),
+            ".gz":   icon("\U0001F4E6", "[Z]"),
         }
-        return icons.get(ext, "[F]")
+        return icons.get(ext, icon("\U0001F4C4", "[F]"))
 
     def draw(self, surface):
         w = surface.get_width()

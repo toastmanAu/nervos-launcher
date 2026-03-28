@@ -6,7 +6,7 @@ Recording continues in background even when navigating other screens.
 
 import pygame
 import os
-from lib.ui import Page, ScrollList, COLORS, draw_text, draw_status_bar, draw_nav_bar, draw_box, get_font
+from lib.ui import Page, ScrollList, COLORS, draw_text, draw_status_bar, draw_nav_bar, draw_box, get_font, icon
 from lib.recorder import ScreenRecorder
 
 
@@ -122,9 +122,9 @@ class RecorderPage(Page):
         recordings = self.recorder.list_recordings()
         if recordings:
             for rec in recordings[:10]:
-                icon = "[V]" if rec["type"] == "video" else "[S]"
+                ic = icon("\U0001F3AC", "[V]") if rec["type"] == "video" else icon("\U0001F4F7", "[S]")
                 items.append({
-                    "text": f"{icon} {rec['name']}",
+                    "text": f"{ic} {rec['name']}",
                     "subtext": rec["size"],
                     "action": "view_file",
                     "path": rec["path"],

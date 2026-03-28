@@ -7,6 +7,26 @@ Designed for 640x480 handheld displays with gamepad input.
 import os
 import pygame
 
+# ── Emoji support detection ─────────────────────────────────
+# Pygame < 2.1 crashes on Unicode chars above U+FFFF
+def _can_render_emoji():
+    try:
+        f = pygame.font.Font(None, 16)
+        f.render("\U0001F4C1", True, (255, 255, 255))
+        return True
+    except Exception:
+        return False
+
+# Deferred — checked after pygame.init()
+EMOJI_OK = None
+
+def icon(emoji, fallback):
+    """Return emoji if supported, ASCII fallback otherwise."""
+    global EMOJI_OK
+    if EMOJI_OK is None:
+        EMOJI_OK = _can_render_emoji()
+    return emoji if EMOJI_OK else fallback
+
 # ── Theme ────────────────────────────────────────────────────
 COLORS = {
     "bg":       (10, 12, 15),
