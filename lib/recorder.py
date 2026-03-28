@@ -267,7 +267,7 @@ class ScreenRecorder:
                     # kmsgrab captures raw portrait buffer — rotate if needed
                     rotate = ""
                     if self.fb_width < self.fb_height:
-                        rotate = "transpose=3,"  # portrait → landscape (counter-clockwise)
+                        rotate = "transpose=2,"  # portrait → landscape (90° counter-clockwise)
                     return "kmsgrab", "/dev/dri/card0", rotate
             except Exception:
                 pass
