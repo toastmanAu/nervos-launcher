@@ -122,7 +122,7 @@ class RecorderPage(Page):
         recordings = self.recorder.list_recordings()
         if recordings:
             for rec in recordings[:10]:
-                icon = "🎬" if rec["type"] == "video" else "📷"
+                icon = "[V]" if rec["type"] == "video" else "[S]"
                 items.append({
                     "text": f"{icon} {rec['name']}",
                     "subtext": rec["size"],

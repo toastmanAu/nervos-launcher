@@ -68,7 +68,7 @@ class FileManagerPage(Page):
         # Parent directory (unless at root)
         if self.current_path != "/":
             items.append({
-                "text": "📁 ..",
+                "text": "[D] ..",
                 "subtext": "parent",
                 "color": COLORS["accent"],
                 "action": "parent",
@@ -123,7 +123,7 @@ class FileManagerPage(Page):
             except:
                 sub = ""
             items.append({
-                "text": f"📁 {d}",
+                "text": f"[D] {d}",
                 "subtext": sub,
                 "color": COLORS["accent"],
                 "action": "enter",
@@ -164,13 +164,13 @@ class FileManagerPage(Page):
 
     def _file_icon(self, ext):
         icons = {
-            ".mp4": "🎬", ".avi": "🎬", ".mkv": "🎬", ".webm": "🎬",
-            ".png": "📷", ".jpg": "📷", ".jpeg": "📷", ".bmp": "📷",
-            ".py": "🐍", ".sh": "⚡", ".json": "📋", ".toml": "⚙️",
-            ".txt": "📄", ".md": "📄", ".log": "📄",
-            ".zip": "📦", ".tar": "📦", ".gz": "📦",
+            ".mp4": "[V]", ".avi": "[V]", ".mkv": "[V]", ".webm": "[V]",
+            ".png": "[I]", ".jpg": "[I]", ".jpeg": "[I]", ".bmp": "[I]",
+            ".py": "[P]", ".sh": "[S]", ".json": "[J]", ".toml": "[C]",
+            ".txt": "[T]", ".md": "[T]", ".log": "[L]",
+            ".zip": "[Z]", ".tar": "[Z]", ".gz": "[Z]",
         }
-        return icons.get(ext, "📄")
+        return icons.get(ext, "[F]")
 
     def draw(self, surface):
         w = surface.get_width()
